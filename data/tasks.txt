@@ -1,1 +1,5 @@
-1|kitap oku|1
+1|Read a book|0
+2|Learn C++ STL|1
+3|Build CLI project|0
+4|Write GitHub README|0
+5|Practice algorithms|1
