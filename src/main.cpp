@@ -36,7 +36,6 @@ void loadTasks() {
         tasks.push_back(Task(id, description, completed));
     }
 }
-
 void saveTasks() {
     std::ofstream file("tasks.txt");
 
@@ -47,7 +46,6 @@ void saveTasks() {
              << std::endl;
     }
 }
-
 void listTasks() {
     for (auto &task : tasks) {
         std::cout << task.id << " - " << task.description;
@@ -59,16 +57,21 @@ void listTasks() {
         std::cout << std::endl;
     }
 }
-
 void addTask(std::string desc) {
     int id = tasks.size() + 1;
     tasks.push_back(Task(id, desc, false));
     saveTasks();
 }
+bool removeTask(int id) {
+    for (auto it = tasks.begin(); it != tasks.end(); ++it) {
+        if (it->id == id) {
+            tasks.erase(it);
+            saveTasks();
+            return true;
+        }
+    }
 
-void removeTask(int id) {
-    tasks.erase(tasks.begin() + id - 1);
-    saveTasks();
+    return false;
 }
 void changeTaskStatus(int id){
     bool found = false;
