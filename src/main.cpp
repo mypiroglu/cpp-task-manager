@@ -7,8 +7,22 @@
 
 std::vector<Task> tasks;
 
+int getNextId() {
+    int maxId = 0;
+
+    for (const auto& task : tasks) {
+        if (task.id > maxId) {
+            maxId = task.id;
+        }
+    }
+
+    return maxId + 1;
+}
+
 void loadTasks() {
-    std::ifstream file("tasks.txt");
+    tasks.clear();
+
+    std::ifstream file("../data/tasks.txt");
     std::string line;
 
     while (std::getline(file, line)) {
@@ -36,32 +50,36 @@ void loadTasks() {
         tasks.push_back(Task(id, description, completed));
     }
 }
-void saveTasks() {
-    std::ofstream file("tasks.txt");
 
-    for (auto &task : tasks) {
+void saveTasks() {
+    std::ofstream file("../data/tasks.txt");
+
+    for (const auto& task : tasks) {
         file << task.id << "|"
              << task.description << "|"
              << task.completed
-             << std::endl;
+             << "\n";
     }
 }
+
 void listTasks() {
-    for (auto &task : tasks) {
-        std::cout << task.id << " - " << task.description;
+    if (tasks.empty()) {
+        std::cout << "There is no task.\n";
+        return;
+    }
 
-        if (task.completed) {
-            std::cout << " ✔";
-        }
-
-        std::cout << std::endl;
+    for (const auto& task : tasks) {
+        std::cout << "[" << (task.completed ? 'x' : ' ') << "] "
+                  << task.id << " - " << task.description << "\n";
     }
 }
-void addTask(std::string desc) {
-    int id = tasks.size() + 1;
+
+void addTask(const std::string& desc) {
+    int id = getNextId();
     tasks.push_back(Task(id, desc, false));
     saveTasks();
 }
+
 bool removeTask(int id) {
     for (auto it = tasks.begin(); it != tasks.end(); ++it) {
         if (it->id == id) {
@@ -73,25 +91,56 @@ bool removeTask(int id) {
 
     return false;
 }
-void changeTaskStatus(int id){
-    bool found = false;
 
-    for(auto &task : tasks){
-        if(task.id == id){
+bool changeTaskStatus(int id) {
+    for (auto &task : tasks) {
+        if (task.id == id) {
             task.completed = !task.completed;
-            found = true;
-            break;
+            saveTasks();
+            return true;
         }
     }
-    if (!found) {
-        std::cout << "Bu id ile task bulunamadi\n";
+
+    return false;
+}
+
+bool updateTask(int id, const std::string& newDesc) {
+    for (auto& task : tasks) {
+        if (task.id == id) {
+            task.description = newDesc;
+            saveTasks();
+            return true;
+        }
     }
-    saveTasks();
+
+    return false;
+}
+
+void searchTask(const std::string& keyword) {
+    bool found = false;
+
+    for (const auto& task : tasks) {
+        if (task.description.find(keyword) != std::string::npos) {
+            std::cout << "[" << (task.completed ? 'x' : ' ') << "] "
+                      << task.id << " - " << task.description << "\n";
+            found = true;
+        }
+    }
+
+    if (!found) {
+        std::cout << "No matching tasks were found.\n";
+    }
 }
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cout << "Usage: ./main [list|add|remove]" << std::endl;
+        std::cout << "Usage:\n";
+        std::cout << "  ./taskmanager list\n";
+        std::cout << "  ./taskmanager add \"task description\"\n";
+        std::cout << "  ./taskmanager remove [id]\n";
+        std::cout << "  ./taskmanager completed [id]\n";
+        std::cout << "  ./taskmanager update [id] \"new description\"\n";
+        std::cout << "  ./taskmanager search \"keyword\"\n";
         return 1;
     }
 
@@ -99,34 +148,62 @@ int main(int argc, char* argv[]) {
 
     std::string command = argv[1];
 
-    if (command == "list") {
-        listTasks();
-    } else if (command == "add") {
-        if (argc < 3) {
-            std::cout << "Usage: ./main add \"task description\"" << std::endl;
-            return 1;
-        }
+    try {
+        if (command == "list") {
+            listTasks();
+        } else if (command == "add") {
+            if (argc < 3) {
+                std::cout << "Usage: ./taskmanager add \"task description\"\n";
+                return 1;
+            }
 
-        std::string desc = argv[2];
-        addTask(desc);
-    } else if (command == "remove") {
-        if (argc < 3) {
-            std::cout << "Usage: ./main remove [id]" << std::endl;
-            return 1;
-        }
+            addTask(argv[2]);
+        } else if (command == "remove") {
+            if (argc < 3) {
+                std::cout << "Usage: ./taskmanager remove [id]\n";
+                return 1;
+            }
 
-        int id = std::stoi(argv[2]);
-        removeTask(id);
-    }  else if (command == "completed") {
-        if (argc < 3) {
-            std::cout << "Usage: ./main completed [id]" << std::endl;
-            return 1;
-        }
+            int id = std::stoi(argv[2]);
 
-        int id = std::stoi(argv[2]);
-        changeTaskStatus(id);
-    } else {
-        std::cout << "Unknown command" << std::endl;
+            if (!removeTask(id)) {
+                std::cout << "Task not found\n";
+            }
+        } else if (command == "completed") {
+            if (argc < 3) {
+                std::cout << "Usage: ./taskmanager completed [id]\n";
+                return 1;
+            }
+
+            int id = std::stoi(argv[2]);
+
+            if (!changeTaskStatus(id)) {
+                std::cout << "Task not found\n";
+            }
+        } else if (command == "update") {
+            if (argc < 4) {
+                std::cout << "Usage: ./taskmanager update [id] \"new description\"\n";
+                return 1;
+            }
+
+            int id = std::stoi(argv[2]);
+
+            if (!updateTask(id, argv[3])) {
+                std::cout << "Task not found.\n";
+            }
+        } else if (command == "search") {
+            if (argc < 3) {
+                std::cout << "Usage: ./taskmanager search \"keyword\"\n";
+                return 1;
+            }
+
+            searchTask(argv[2]);
+        } else {
+            std::cout << "Unknown command\n";
+        }
+    } catch (...) {
+        std::cout << "Invalid ID or incorrect enter.\n";
+        return 1;
     }
 
     return 0;
